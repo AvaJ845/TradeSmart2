@@ -1,12 +1,12 @@
-# Updated requirements.txt with specific versions
+# Updated requirements.txt with Python 3.12 compatible versions
 streamlit==1.30.0
-pandas==2.0.3
-numpy==1.24.3
-matplotlib==3.7.2
-seaborn==0.12.2
+pandas>=2.1.0
+numpy>=1.26.0
+matplotlib>=3.8.0
+seaborn>=0.13.0
 requests==2.31.0
 ccxt==3.1.54
-scipy==1.10.1
+scipy>=1.12.0
 pandas-ta==0.3.14b0
 plotly==5.18.0
 streamlit-option-menu==0.3.2
