@@ -1,12 +1,13 @@
-streamlit
-pandas
-numpy
-matplotlib
-seaborn
-requests
-ccxt
-plotly
-scipy
-TA-Lib
-yfinance
-streamlit-option-menu
+# requirements.txt
+streamlit==1.24.0
+pandas==2.0.3
+numpy==1.24.3
+matplotlib==3.7.2
+seaborn==0.12.2
+requests==2.31.0
+ccxt==3.0.72
+scipy==1.10.1
+pandas-ta==0.3.14b0
+plotly==5.15.0
+streamlit-option-menu==0.3.2
+yfinance==0.2.26
