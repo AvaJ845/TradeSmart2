@@ -1,4 +1,3 @@
-# config.py
 """
 Configuration settings for the StableCoin Arbitrage TradeSmart 2 platform
 """
