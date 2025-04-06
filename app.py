@@ -10,9 +10,9 @@ import ccxt
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
 import plotly.express as px
-from plotly.subplots import make_subplots  # Fixed: Added missing import
+from plotly.subplots import make_subplots
 from scipy import stats
-import pandas_ta as ta  # Fixed: Replaced TA-Lib with pandas_ta for better compatibility
+import pandas_ta as ta  # Using pandas_ta for better compatibility
 import yfinance as yf
 from streamlit_option_menu import option_menu
 import json
@@ -104,6 +104,8 @@ def init_session_state():
         st.session_state.api_keys = {}
     if 'simulation_mode' not in st.session_state:
         st.session_state.simulation_mode = True
+    if 'show_api_modal' not in st.session_state:
+        st.session_state.show_api_modal = False
 
 # UI Sections Functions
 def market_scanner_section():
@@ -139,14 +141,13 @@ def market_scanner_section():
                 ]
                 
                 # Find arbitrage opportunities
-                # Fixed: Added transaction and withdrawal fees
                 opportunities = find_arbitrage_opportunities(
                     filtered_data, 
                     transaction_fees=TRANSACTION_FEES,
                     withdrawal_fees=WITHDRAWAL_FEES
                 )
                 
-                # Fixed: Added slippage estimation
+                # Add slippage estimation
                 for i, row in opportunities.iterrows():
                     slippage = estimate_slippage(
                         row['Stablecoin'], 
@@ -160,10 +161,22 @@ def market_scanner_section():
                         opportunities.at[i, 'Potential Profit per $1000'] - slippage
                     )
                 
-                st.session_state.opportunities = opportunities[
-                    (opportunities['Percent Difference'] >= min_price_diff) &
-                    (opportunities['Adjusted Profit per $1000'] >= min_profit)
-                ]
+                # FIXED: Safely filter opportunities
+                if not opportunities.empty:
+                    filtered_opps = opportunities.copy()
+                    
+                    # Apply filters only if columns exist
+                    if 'Percent Difference' in opportunities.columns:
+                        filtered_opps = filtered_opps[filtered_opps['Percent Difference'] >= min_price_diff]
+                    
+                    if 'Adjusted Profit per $1000' in opportunities.columns:
+                        filtered_opps = filtered_opps[filtered_opps['Adjusted Profit per $1000'] >= min_profit]
+                    elif 'Potential Profit per $1000' in opportunities.columns:
+                        filtered_opps = filtered_opps[filtered_opps['Potential Profit per $1000'] >= min_profit]
+                    
+                    st.session_state.opportunities = filtered_opps
+                else:
+                    st.session_state.opportunities = opportunities
         
         st.markdown('</div>', unsafe_allow_html=True)
         
@@ -243,24 +256,35 @@ def market_scanner_section():
                 if not st.session_state.opportunities.empty:
                     # Format and display opportunities
                     display_df = st.session_state.opportunities.copy()
-                    display_df['Price Difference'] = display_df['Price Difference'].map('{:.6f}'.format)
-                    display_df['Percent Difference'] = display_df['Percent Difference'].map('{:.4f}%'.format)
-                    display_df['Potential Profit per $1000'] = display_df['Potential Profit per $1000'].map('${:.2f}'.format)
-                    display_df['Adjusted Profit per $1000'] = display_df['Adjusted Profit per $1000'].map('${:.2f}'.format)
-                    display_df['Estimated Slippage'] = display_df['Estimated Slippage'].map('${:.2f}'.format)
+                    
+                    # FIXED: Safely format columns only if they exist
+                    if 'Price Difference' in display_df.columns:
+                        display_df['Price Difference'] = display_df['Price Difference'].map('{:.6f}'.format)
+                    if 'Percent Difference' in display_df.columns:
+                        display_df['Percent Difference'] = display_df['Percent Difference'].map('{:.4f}%'.format)
+                    if 'Potential Profit per $1000' in display_df.columns:
+                        display_df['Potential Profit per $1000'] = display_df['Potential Profit per $1000'].map('${:.2f}'.format)
+                    if 'Adjusted Profit per $1000' in display_df.columns:
+                        display_df['Adjusted Profit per $1000'] = display_df['Adjusted Profit per $1000'].map('${:.2f}'.format)
+                    if 'Estimated Slippage' in display_df.columns:
+                        display_df['Estimated Slippage'] = display_df['Estimated Slippage'].map('${:.2f}'.format)
                     
                     st.dataframe(display_df, use_container_width=True)
                     
                     # Bar chart of profit opportunities
-                    fig = px.bar(
-                        st.session_state.opportunities,
-                        x='Stablecoin',
-                        y='Adjusted Profit per $1000',
-                        color='Adjusted Profit per $1000',
-                        hover_data=['Buy Exchange', 'Sell Exchange', 'Percent Difference'],
-                        title='Potential Profit per $1000 Investment (After Fees & Slippage)'
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
+                    # FIXED: Check if column exists before creating chart
+                    profit_column = 'Adjusted Profit per $1000' if 'Adjusted Profit per $1000' in st.session_state.opportunities.columns else 'Potential Profit per $1000'
+                    
+                    if profit_column in st.session_state.opportunities.columns:
+                        fig = px.bar(
+                            st.session_state.opportunities,
+                            x='Stablecoin',
+                            y=profit_column,
+                            color=profit_column,
+                            hover_data=['Buy Exchange', 'Sell Exchange'],
+                            title='Potential Profit per $1000 Investment (After Fees & Slippage)'
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
                     
                     # Added: Execution time warning
                     st.warning("Note: Arbitrage opportunities may disappear quickly. The execution time between exchanges can impact profitability.")
@@ -305,7 +329,7 @@ def pair_analysis_section():
                     st.session_state.z_scores[stablecoin], exchange2
                 )
                 
-                # Fixed: Calculate execution time impact
+                # Calculate execution time impact
                 st.session_state.execution_impact = {
                     'time_minutes': np.random.randint(2, 15),  # Simulate execution time between exchanges
                     'price_impact_pct': np.random.uniform(0.01, 0.1)  # Simulate price impact during execution
@@ -457,7 +481,6 @@ def technical_analysis_section():
                 hist_data = st.session_state.historical_data[stablecoin].copy()
                 
                 # Calculate technical indicators
-                # Fixed: Using pandas_ta instead of talib
                 ta_data = calculate_technical_indicators(hist_data, exchange)
                 
                 # Generate signals
@@ -606,7 +629,7 @@ def risk_analysis_section():
     """UI section for Risk Analysis Module"""
     st.markdown('<div class="sub-header">Risk Analysis Module</div>', unsafe_allow_html=True)
     
-    if hasattr(st.session_state, 'opportunities') and not st.session_state.opportunities.empty:
+    if hasattr(st.session_state, 'opportunities') and st.session_state.opportunities is not None and not st.session_state.opportunities.empty:
         # Calculate risk metrics
         trade_metrics = calculate_trade_metrics(st.session_state.opportunities)
         
@@ -668,7 +691,7 @@ def risk_analysis_section():
             max_risk_pct = st.slider("Maximum Risk per Trade (%)", 0.1, 5.0, 1.0, 0.1)
             max_portfolio_pct = st.slider("Maximum Portfolio Allocation per Trade (%)", 5.0, 50.0, 20.0, 5.0)
             
-            # Fixed: Added stop-loss settings
+            # Added stop-loss settings
             st.subheader("Stop Loss Settings")
             use_stop_loss = st.checkbox("Use Stop Loss", value=True)
             if use_stop_loss:
@@ -688,7 +711,7 @@ def risk_analysis_section():
                     # Maximum position based on risk
                     max_risk_amount = total_capital * (max_risk_pct / 100)
                     
-                    # Fixed: Adjusted risk calculation to include stop loss
+                    # Adjusted risk calculation to include stop loss
                     risk_per_dollar = row["Risk Amount per $1000"] / 1000
                     if use_stop_loss:
                         # Use the minimum of actual risk and stop loss
@@ -704,13 +727,13 @@ def risk_analysis_section():
                     # Choose the smaller of the two
                     recommended_position = min(position_size_risk, max_allocation)
                     
-                    # Fixed: Added execution risk factor
+                    # Added execution risk factor
                     execution_risk_factor = 0.9  # Assume 10% reduction in profit due to execution risk
                     
                     # Calculate expected profit
                     expected_profit = (recommended_position / 1000 * row["Net Profit per $1000"]) * execution_risk_factor
                     
-                    # Fixed: Add withdrawal and transaction costs
+                    # Add withdrawal and transaction costs
                     transaction_costs = recommended_position * (TRANSACTION_FEES.get(row["Buy Exchange"], 0.001) + 
                                                              TRANSACTION_FEES.get(row["Sell Exchange"], 0.001))
                     withdrawal_cost = WITHDRAWAL_FEES.get(row["Buy Exchange"], {}).get(row["Stablecoin"], 0)
@@ -748,7 +771,7 @@ def risk_analysis_section():
                 total_expected_profit = position_df["Expected Profit ($)"].sum()
                 st.metric("Total Expected Profit", f"${total_expected_profit:.2f}")
                 
-                # Fixed: Added risk warnings
+                # Added risk warnings
                 if total_expected_profit < 0:
                     st.error("Warning: After accounting for all costs and risks, these trades are expected to result in a net loss.")
                 elif total_expected_profit < position_df["Transaction Costs ($)"].sum() * 2:
