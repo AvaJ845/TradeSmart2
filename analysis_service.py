@@ -61,7 +61,8 @@ def find_arbitrage_opportunities(df, transaction_fees=None, withdrawal_fees=None
                     'Transaction Fees': buy_fee + sell_fee,
                     'Withdrawal Fee': withdrawal_fee,
                     'Net Price Difference': net_price_diff,
-                    'Potential Profit per $1000': (1000 / min_price_row['Price']) * net_price_diff
+                    'Potential Profit per $1000': (1000 / min_price_row['Price']) * net_price_diff,
+                    'Adjusted Profit per $1000': (1000 / min_price_row['Price']) * net_price_diff  # Adding this to match app.py expectations
                 })
     
     return pd.DataFrame(opportunities)
