@@ -1,0 +1,12 @@
+streamlit
+pandas
+numpy
+matplotlib
+seaborn
+requests
+ccxt
+plotly
+scipy
+TA-Lib
+yfinance
+streamlit-option-menu
