@@ -1,13 +1,13 @@
-# requirements.txt
-streamlit==1.24.0
+# Updated requirements.txt with specific versions
+streamlit==1.30.0
 pandas==2.0.3
 numpy==1.24.3
 matplotlib==3.7.2
 seaborn==0.12.2
 requests==2.31.0
-ccxt==3.0.72
+ccxt==3.1.54
 scipy==1.10.1
 pandas-ta==0.3.14b0
-plotly==5.15.0
+plotly==5.18.0
 streamlit-option-menu==0.3.2
-yfinance==0.2.26
+yfinance==0.2.35
